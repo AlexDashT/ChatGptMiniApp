@@ -1,0 +1,57 @@
+﻿@page "/"
+
+@page "/chat"
+@using ChatGptMiniApp.Client.Services
+@inject ChatService ChatService
+
+<div class="container mt-3">
+    <div class="card">
+        <div class="card-header">
+            Chat
+        </div>
+        <div class="card-body">
+            <ul class="list-group mb-3">
+                @foreach (var message in messages)
+                {
+                    <li class="list-group-item">
+                        <strong>@message.User:</strong> @message.Text
+                    </li>
+                }
+            </ul>
+            <input @bind="userMessage" @bind:event="oninput" class="form-control" placeholder="Type a message..." />
+            <button class="btn btn-primary mt-2" @onclick="SendMessage">Send</button>
+        </div>
+    </div>
+</div>
+
+@code {
+    private string userMessage;
+    private List<Message> messages = new();
+
+    private async Task SendMessage()
+    {
+        messages.Add(new Message { User = "You", Text = userMessage });
+        messages.Add(new Message { User = "Bot", Text = "" });
+
+        await ChatService.StreamMessage(chatId, userMessage, (botMessage) =>
+        {
+            InvokeAsync(() =>
+            {
+                messages.Last().Text += botMessage;
+                StateHasChanged();
+            });
+        });
+
+        userMessage = string.Empty;
+    }
+
+    private class Message
+    {
+        public string User { get; set; }
+        public string Text { get; set; }
+    }
+
+    [Parameter]
+    public int chatId { get; set; }
+}
+
