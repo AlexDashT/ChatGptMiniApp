@@ -11,7 +11,7 @@ public class ChatService
         _httpClient = httpClient;
     }
 
-    public async Task StreamMessage(int chatId, string userMessage, Action<string> onMessageReceived)
+    public async Task StreamMessage(Guid chatId, string userMessage, Action<string> onMessageReceived, Action<string> onChatIdReceived)
     {
         var request = new HttpRequestMessage(HttpMethod.Post, $"api/chat/{chatId}/stream")
         {
@@ -27,10 +27,23 @@ public class ChatService
         while (!reader.EndOfStream)
         {
             var line = await reader.ReadLineAsync();
-            if (!string.IsNullOrWhiteSpace(line) && line.StartsWith("data:"))
+
+            switch (string.IsNullOrWhiteSpace(line))
             {
-                var message = line.Substring("data:".Length);
-                onMessageReceived(message);
+                case false when line.StartsWith("data:"):
+                {
+                    var message = line.Substring("data:".Length);
+                    onMessageReceived(message);
+
+                    break;
+                }
+                case false when line.StartsWith("chatid:"):
+                {
+                    var message = line.Substring("chatid:".Length);
+                    onChatIdReceived(message);
+
+                    break;
+                }
             }
         }
     }

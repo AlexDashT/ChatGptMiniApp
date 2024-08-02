@@ -23,6 +23,7 @@ namespace ChatGptMiniApp.Server.Infrastructure.Data.Repositories
             var chat = new Chat { UserName = userName };
             _context.Chats.Add(chat);
             await _context.SaveChangesAsync();
+            chat.Messages = new List<Message>();
             return chat;
         }
 

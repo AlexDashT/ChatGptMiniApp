@@ -33,12 +33,19 @@
         messages.Add(new Message { User = "You", Text = userMessage });
         messages.Add(new Message { User = "Bot", Text = "" });
 
-        await ChatService.StreamMessage(chatId, userMessage, (botMessage) =>
+        await ChatService.StreamMessage(ChatId, userMessage, botMessage =>
         {
             InvokeAsync(() =>
             {
                 messages.Last().Text += botMessage;
                 StateHasChanged();
+            });
+        }
+        , botMessage =>
+    {
+            InvokeAsync(() =>
+            {
+                ChatId = Guid.Parse(botMessage);
             });
         });
 
@@ -52,6 +59,6 @@
     }
 
     [Parameter]
-    public int chatId { get; set; }
+    public Guid ChatId { get; set; } = Guid.Empty;
 }
 

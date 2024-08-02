@@ -1,4 +1,5 @@
 ﻿using ChatGptMiniApp.Server.Core.Interfaces;
+using ChatGptMiniApp.Shared.Domain.Entities;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using OpenAI.Chat;
@@ -29,15 +30,37 @@ namespace ChatGptMiniApp.Server.Controllers
 
 
         [HttpPost("{chatId}/stream")]
-        public async Task StreamMessage(int chatId, [FromBody] string userMessage)
+        public async Task StreamMessage(Guid chatId, [FromBody] string userMessage)
         {
             Response.ContentType = "text/event-stream";
+            Chat chat;
+
+            if (chatId == Guid.Empty)
+            {
+                chat = await _chatRepository.CreateChatAsync("ali");
+            }
+            else
+            {
+                chat = await _chatRepository.GetChatByIdAsync(chatId);
+            }
+
+            var messages = new List<ChatMessage>();
+
+            foreach (Message message in chat.Messages)
+            {
+                if (message.IsUser)
+                {
+                    messages.Add(new UserChatMessage(message.Text));
+                }
+                else
+                {
+                    messages.Add(new AssistantChatMessage(message.Text));
+                }
+            }
+            messages.Add(new UserChatMessage(userMessage));
 
             var client = new ChatClient("gpt-4o-mini", _openAiApiKey);
-            var messages = new List<ChatMessage>
-            {
-                new UserChatMessage(userMessage)
-            };
+           
 
             await foreach (var update in client.CompleteChatStreamingAsync(messages))
             {
@@ -47,6 +70,10 @@ namespace ChatGptMiniApp.Server.Controllers
                     await Response.Body.FlushAsync();
                 }
             }
+
+            await _messageRepository.AddMessageAsync(chat.Id, userMessage, true);
+            await Response.WriteAsync($"chatid: {chat.Id}\n\n");
+            await Response.Body.FlushAsync();
         }
 
         [HttpGet("{chatId}")]
