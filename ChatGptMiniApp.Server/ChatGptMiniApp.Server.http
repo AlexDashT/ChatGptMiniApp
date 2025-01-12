@@ -1,0 +1,6 @@
+@ChatGptMiniApp.Server_HostAddress = http://localhost:5160
+
+GET {{ChatGptMiniApp.Server_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
