@@ -4,46 +4,125 @@
 @rendermode InteractiveAuto
 @inject ChatService ChatService
 
-<PageTitle>Home</PageTitle>
-<h3>Welcome to the Location Map</h3>
+<div id="wrapper" class="@(SidebarToggled ? "toggled" : "")">
+    <div class="overlay" style="display: @(OverlayVisible ? "block" : "none");"></div>
 
-<div class="container mt-3">
-    <div class="card">
-        <div class="card-header">
-            Chat
-        </div>
-        <div class="card-body">
-            <ul class="list-group mb-3">
-                @foreach (var message in messages)
-                {
-                    <li class="list-group-item">
-                        <strong>@message.User:</strong> @((MarkupString)message.Text)
-                    </li>
-                }
-            </ul>
-            <input @bind="userMessage" @bind:event="oninput" class="form-control" placeholder="Type a message..." />
-            <button class="btn btn-primary mt-2" @onclick="SendMessage">Send</button>
+    <!-- Sidebar -->
+    <nav class="navbar navbar-inverse fixed-top" id="sidebar-wrapper" role="navigation">
+        <ul class="nav sidebar-nav">
+            <div class="sidebar-header">
+                <div class="sidebar-brand">
+                    <a href="#">Chat</a>
+                </div>
+            </div>
+            <li><a href="#home">New Chat</a></li>
+            
+        </ul>
+    </nav>
+    <!-- /#sidebar-wrapper -->
+
+    <!-- Page Content -->
+    <div id="page-content-wrapper">
+        <button type="button" class="hamburger animated fadeInLeft @(IsClosed ? "is-closed" : "is-open")" @onclick="ToggleSidebar">
+            <span class="hamb-top"></span>
+            <span class="hamb-middle"></span>
+            <span class="hamb-bottom"></span>
+        </button>
+        <div class="container-dark">
+            <div class="row">
+                <div class="col-lg-8 col-lg-offset-2">
+                    <ul class="list-unstyled">
+                    @foreach (var message in messages.Where(m=>m.Text != string.Empty))
+                    {
+                        @if (message.User != "You")
+                        {
+                            <li class="d-flex justify-content-between mb-4">
+                                <img src="https://mdbcdn.b-cdn.net/img/Photos/Avatars/avatar-6.webp" alt="avatar"
+                                     class="rounded-circle d-flex align-self-start me-3 shadow-1-strong" width="60">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <p class="mb-0">
+                                            @((MarkupString)message.Text)
+                                        </p>
+                                    </div>
+                                </div>
+                            </li>
+                        }
+                        else
+                        {
+
+                            <li class="d-flex justify-content-between mb-4">
+                                <div class="card w-100">
+                                    <div class="card-body">
+                                        <p class="mb-0">
+                                            @((MarkupString)message.Text)
+                                        </p>
+                                    </div>
+                                </div>
+                                <img src="https://mdbcdn.b-cdn.net/img/Photos/Avatars/avatar-5.webp" alt="avatar"
+                                     class="rounded-circle d-flex align-self-start ms-3 shadow-1-strong" width="60">
+                            </li>
+                        }
+                    }
+
+                    <li class="bg-white mb-3">
+                            <div data-mdb-input-init class="form-outline">
+                                <textarea class="form-control bg-body-tertiary" id="textAreaExample2" rows="4" @bind="userMessage" @bind:event="oninput" @onkeydown="HandleKeyDown"
+                   placeholder="Type your message..." disabled="@typingdisabled" ></textarea>
+                            </div>
+                        </li>
+                        <button type="button" data-mdb-button-init data-mdb-ripple-init class="btn btn-info btn-rounded float-end" @onclick="SendMessage"  disabled="@typingdisabled" > <b>&uarr;</b></button>
+                    </ul>
+                </div>
+            </div>
         </div>
     </div>
+    <!-- /#page-content-wrapper -->
 </div>
+<!-- /#wrapper -->
 
 @code {
+
+    private bool SidebarToggled = false;
+    private bool OverlayVisible = false;
+    private bool IsClosed = true;
+    private bool typingdisabled = false;
+
+    private void ToggleSidebar()
+    {
+        SidebarToggled = !SidebarToggled;
+        OverlayVisible = SidebarToggled;
+        IsClosed = !SidebarToggled;
+        StateHasChanged();
+    }
     private string userMessage;
     private List<Message> messages = new();
+    private bool SidebarCollapsed = true;
+    private bool DarkMode = false;
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await SendMessage();
+        }
+    }
 
     private async Task SendMessage()
     {
+        typingdisabled = true;
         messages.Add(new Message { User = "You", Text = userMessage });
         messages.Add(new Message { User = "Bot", Text = "" });
 
         
-        var allMesage = ""; 
+        var allMessage = ""; 
         await ChatService.StreamMessage(ChatId, userMessage, botMessage =>
         {
+            userMessage = string.Empty;
             InvokeAsync(() =>
             {               
-                allMesage += botMessage;
-                var result = TextHelper.MarkupToHtml(allMesage.Replace("<br>", "\n"));
+                allMessage += botMessage;
+                var result = TextHelper.MarkupToHtml(allMessage.Replace("<br>", "\n"));
                 if (TextHelper.IsLikelyPersian(result))
                 {
                     result = $"<div dir=\"rtl\" style=\"text-align: right\" >{ result}</ div > ";
@@ -61,7 +140,7 @@
     });
     });
 
-    userMessage = string.Empty;
+        typingdisabled = false;
     }
 
     private class Message

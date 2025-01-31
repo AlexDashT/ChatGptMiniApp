@@ -1,12 +1,10 @@
 ﻿using ChatGptMiniApp.Server.Core.Interfaces;
 using ChatGptMiniApp.Shared.Domain.Entities;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using OpenAI;
 using OpenAI.Chat;
 using System.ClientModel;
 using System.Text;
-using static System.Runtime.InteropServices.JavaScript.JSType;
+using String = System.String;
 
 namespace ChatGptMiniApp.Server.Controllers
 {
@@ -50,7 +48,7 @@ namespace ChatGptMiniApp.Server.Controllers
 
             var messages = new List<ChatMessage>();
 
-            foreach (Message message in chat.Messages)
+            foreach (Message message in chat.Messages.OrderBy(m=>m.SentAt))
             {
                 if (message.IsUser)
                 {
@@ -67,12 +65,14 @@ namespace ChatGptMiniApp.Server.Controllers
 
             AsyncCollectionResult<StreamingChatCompletionUpdate> completionUpdates = client.CompleteChatStreamingAsync(messages);
 
+            string responseText = String.Empty;
             await foreach (StreamingChatCompletionUpdate completionUpdate in completionUpdates)
             {
                 if (completionUpdate.ContentUpdate.Count > 0)
                 {
                     string data = completionUpdate.ContentUpdate[0].Text;
                     string dataWithBr = data.Replace("\n", "<br>");
+                    responseText += dataWithBr;
                     var bytes = Encoding.UTF8.GetBytes($"data:{dataWithBr}\n\n");
 
                     await Response.Body.WriteAsync(bytes, 0, bytes.Length);
@@ -82,6 +82,7 @@ namespace ChatGptMiniApp.Server.Controllers
 
 
             await _messageRepository.AddMessageAsync(chat.Id, userMessage, true);
+            await _messageRepository.AddMessageAsync(chat.Id, responseText, false);
             await Response.WriteAsync($"chatid: {chat.Id}\n\n");
             await Response.Body.FlushAsync();
         }
