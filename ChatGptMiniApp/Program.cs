@@ -5,6 +5,9 @@ using Microsoft.AspNetCore.Components.Authorization;
 using ChatGptMiniApp.Client.Services;
 using ChatGptMiniApp.Components;
 using ChatGptMiniApp.Client.Pages;
+using Blazored.LocalStorage;
+using ChatGptMiniApp.Services;
+using Microsoft.AspNetCore.Components;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -15,19 +18,36 @@ builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents()
     .AddInteractiveWebAssemblyComponents();
 
-builder.Services.AddCascadingAuthenticationState();
-builder.Services.AddScoped<AuthenticationStateProvider, PersistingRevalidatingAuthenticationStateProvider>();
+builder.Services.AddControllers();
 
-builder.Services
-       .AddAuth0WebAppAuthentication(options => {
-            options.Domain = builder.Configuration["Auth0:Domain"];
-            options.ClientId = builder.Configuration["Auth0:ClientId"];
+builder.Services.AddCascadingAuthenticationState();
+builder.Services.AddAuthorizationCore();
+builder.Services.AddSignalR();
+builder.Services.AddScoped<AuthenticationStateProvider, PersistingRevalidatingAuthenticationStateProvider>();
+builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+       .AddCookie(options =>
+        {
+            // Set options as needed
+            options.LoginPath = "/login"; // Path for login redirection
+            options.AccessDeniedPath = "/access-denied";
+            // options.ExpireTimeSpan = TimeSpan.FromMinutes(60);
         });
+// Register our custom AuthenticationStateProvider.
+//builder.Services.AddScoped<AuthenticationStateProvider, CustomAuthenticationStateProvider>();
+
+
+//builder.Services
+//       .AddAuth0WebAppAuthentication(options => {
+//            options.Domain = builder.Configuration["Auth0:Domain"];
+//            options.ClientId = builder.Configuration["Auth0:ClientId"];
+//        });
 builder.Services.AddHttpClient("ChatGptMiniApp.ServerAPI", client => client.BaseAddress = new Uri("https://localhost:7098"));
 
 // Supply HttpClient instances that include access tokens when making requests to the server project
 builder.Services.AddScoped(sp => sp.GetRequiredService<IHttpClientFactory>().CreateClient("ChatGptMiniApp.ServerAPI"));
 builder.Services.AddScoped<ChatService>();
+builder.Services.AddScoped<AuthService>();
+builder.Services.AddBlazoredLocalStorage();
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -50,6 +70,7 @@ app.UseAntiforgery();
 //app.MapGet("/", () => "Hello World!");
 app.MapGet("/Account/Login", async (HttpContext httpContext, string returnUrl = "/") =>
 {
+
   var authenticationProperties = new LoginAuthenticationPropertiesBuilder()
           .WithRedirectUri(returnUrl)
           .Build();
@@ -71,5 +92,7 @@ app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode()
     .AddInteractiveWebAssemblyRenderMode()
     .AddAdditionalAssemblies(typeof(Home).Assembly);
+
+app.MapControllers();
 
 app.Run();

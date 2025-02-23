@@ -1,0 +1,15 @@
+﻿@page "/logout-confirmation"
+@inject NavigationManager Navigation
+@inject Blazored.LocalStorage.ILocalStorageService LocalStorage
+@rendermode InteractiveServer
+
+<h6>Logging out...</h6>
+
+@code {
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await LocalStorage.RemoveItemAsync("token");
+
+        Navigation.NavigateTo("/", forceLoad: true);
+    }
+}

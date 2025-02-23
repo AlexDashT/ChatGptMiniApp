@@ -1,51 +1,37 @@
 ﻿using ChatGptMiniApp.Server.Core.Interfaces;
 using ChatGptMiniApp.Shared.Domain.Entities;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using OpenAI.Chat;
 using System.ClientModel;
+using System.Security.Claims;
 using System.Text;
-using String = System.String;
 
 namespace ChatGptMiniApp.Server.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class ChatController : ControllerBase
+    public class ChatController
+        (IChatRepository chatRepository, IMessageRepository messageRepository, IUserRepository userRepository)
+        : ControllerBase
     {
-        private readonly IChatRepository _chatRepository;
-        private readonly IMessageRepository _messageRepository;
-        private readonly string? _openAiApiKey;
+        private readonly string? _openAiApiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY");
 
-        public ChatController(IChatRepository chatRepository, IMessageRepository messageRepository)
-        {
-            _chatRepository = chatRepository;
-            _messageRepository = messageRepository;
-            _openAiApiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY");
-        }
-
-        [HttpPost("create")]
-        public async Task<IActionResult> CreateChat([FromBody] string userName)
-        {
-            var chat = await _chatRepository.CreateChatAsync(userName);
-            return Ok(chat);
-        }
-
-
+        [Authorize]
         [HttpPost("{chatId}/stream")]
         public async Task StreamMessage(Guid chatId, [FromBody] string userMessage)
         {
+            var email = User.FindFirst(ClaimTypes.Email)?.Value;
+            var user = await userRepository.GetUserByEmailAsync(email);
+
             Response.ContentType = "text/event-stream";
-            Chat chat;
+            Chat chat = await chatRepository.GetChatByIdAsync(chatId);
 
-            if (chatId == Guid.Empty)
+            if (chat == null)
             {
-                chat = await _chatRepository.CreateChatAsync("ali");
+                String title = userMessage[..(userMessage.Length>50?50:userMessage.Length)];
+                chat = await chatRepository.CreateChatAsync(user.Id, title, chatId);
             }
-            else
-            {
-                chat = await _chatRepository.GetChatByIdAsync(chatId);
-            }
-
             var messages = new List<ChatMessage>();
 
             foreach (Message message in chat.Messages.OrderBy(m=>m.SentAt))
@@ -81,8 +67,8 @@ namespace ChatGptMiniApp.Server.Controllers
             }
 
 
-            await _messageRepository.AddMessageAsync(chat.Id, userMessage, true);
-            await _messageRepository.AddMessageAsync(chat.Id, responseText, false);
+            await messageRepository.AddMessageAsync(chat.Id, userMessage, true);
+            await messageRepository.AddMessageAsync(chat.Id, responseText, false);
             await Response.WriteAsync($"chatid: {chat.Id}\n\n");
             await Response.Body.FlushAsync();
         }
@@ -90,19 +76,12 @@ namespace ChatGptMiniApp.Server.Controllers
         [HttpGet("{chatId}")]
         public async Task<IActionResult> GetChat(Guid chatId)
         {
-            var chat = await _chatRepository.GetChatByIdAsync(chatId);
+            var chat = await chatRepository.GetChatByIdAsync(chatId);
             if (chat == null)
             {
                 return NotFound();
             }
             return Ok(chat);
-        }
-
-        [HttpGet]
-        public async Task<IActionResult> GetAllChats()
-        {
-            var chats = await _chatRepository.GetAllChatsAsync();
-            return Ok(chats);
         }
     }
 

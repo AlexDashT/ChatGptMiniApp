@@ -1,3 +1,4 @@
+using Blazored.LocalStorage;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using Microsoft.AspNetCore.Components.Authorization;
 using ChatGptMiniApp.Client.Services;
@@ -13,4 +14,5 @@ builder.Services.AddHttpClient("ChatGptMiniApp.ServerAPI", client => client.Base
 builder.Services.AddScoped(sp => sp.GetRequiredService<IHttpClientFactory>().CreateClient("ChatGptMiniApp.ServerAPI"));
 builder.Services.AddScoped<ChatService>();
 
+builder.Services.AddBlazoredLocalStorage();
 await builder.Build().RunAsync();

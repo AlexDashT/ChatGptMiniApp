@@ -7,10 +7,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Folder Include="Domain\Dtos\" />
-  </ItemGroup>
-
-  <ItemGroup>
     <PackageReference Include="Markdig" Version="0.40.0" />
   </ItemGroup>
 

@@ -13,16 +13,16 @@ namespace ChatGptMiniApp.Server.Infrastructure.Data.Repositories
             _context = context;
         }
 
-        public async Task<Chat> CreateChatAsync(string userName)
+        public async Task<Chat> CreateChatAsync(Guid userId, string title, Guid chatId)
         {
-            var chat = new Chat { UserName = userName };
+            var chat = new Chat { UserId = userId,Title = title,Id = chatId};
             _context.Chats.Add(chat);
             await _context.SaveChangesAsync();
             chat.Messages = new List<Message>();
             return chat;
         }
 
-        public async Task<Chat> GetChatByIdAsync(Guid chatId)
+        public async Task<Chat?> GetChatByIdAsync(Guid chatId)
         {
             return await _context.Chats.Include(c => c.Messages).FirstOrDefaultAsync(c => c.Id == chatId);
         }

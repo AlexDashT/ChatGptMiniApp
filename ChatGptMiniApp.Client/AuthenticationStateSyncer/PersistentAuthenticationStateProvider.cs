@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
 using System.Security.Claims;
+using ChatGptMiniApp.Shared.Domain.Dtos;
 
 public class PersistentAuthenticationStateProvider(PersistentComponentState persistentState) : AuthenticationStateProvider
 {
@@ -15,12 +16,11 @@ public class PersistentAuthenticationStateProvider(PersistentComponentState pers
     }
 
     Claim[] claims = [
-        new Claim(ClaimTypes.NameIdentifier, userInfo.UserId),
         new Claim(ClaimTypes.Name, userInfo.Name ?? string.Empty),
         new Claim(ClaimTypes.Email, userInfo.Email ?? string.Empty)];
 
     return Task.FromResult(
         new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity(claims,
-            authenticationType: nameof(PersistentAuthenticationStateProvider)))));
+                                                                       authenticationType: nameof(PersistentAuthenticationStateProvider)))));
   }
 }

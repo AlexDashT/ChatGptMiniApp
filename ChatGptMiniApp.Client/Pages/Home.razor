@@ -1,6 +1,5 @@
 ﻿@page "/"
 @using ChatGptMiniApp.Shared.Helper
-@using Markdig
 @rendermode InteractiveAuto
 @inject ChatService ChatService
 
@@ -28,6 +27,21 @@
             <span class="hamb-middle"></span>
             <span class="hamb-bottom"></span>
         </button>
+        
+        <CascadingAuthenticationState>
+            <AuthorizeView>
+                <Authorized>
+                    <NavLink class="nav-link" href="logout">
+                        <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Logout
+                    </NavLink>
+                </Authorized>
+                <NotAuthorized>
+                    <NavLink class="nav-link" href="login">
+                        <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Login
+                    </NavLink>
+                </NotAuthorized>
+            </AuthorizeView>
+        </CascadingAuthenticationState>
         <div class="container-dark">
             <div class="row">
                 <div class="col-lg-8 col-lg-offset-2">
@@ -150,6 +164,6 @@
     }
 
     [Parameter]
-    public Guid ChatId { get; set; } = Guid.Empty;
+    public Guid ChatId { get; set; } = Guid.NewGuid();
 }
 

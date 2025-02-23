@@ -6,6 +6,8 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;
 using System.Diagnostics;
 using System.Security.Claims;
+using System.Text.Json;
+using ChatGptMiniApp.Shared.Domain.Dtos;
 
 public class PersistingRevalidatingAuthenticationStateProvider : RevalidatingServerAuthenticationStateProvider
 {
@@ -44,12 +46,7 @@ public class PersistingRevalidatingAuthenticationStateProvider : RevalidatingSer
 
   private bool ValidateSecurityStampAsync(ClaimsPrincipal principal)
   {
-    if (principal.Identity?.IsAuthenticated is false)
-    {
-      return false;
-    }
-
-    return true;
+    return principal.Identity?.IsAuthenticated is not false;
   }
 
   private void OnAuthenticationStateChanged(Task<AuthenticationState> authenticationStateTask)
@@ -69,15 +66,13 @@ public class PersistingRevalidatingAuthenticationStateProvider : RevalidatingSer
 
     if (principal.Identity?.IsAuthenticated == true)
     {
-      var userId = principal.FindFirst(_options.ClaimsIdentity.UserIdClaimType)?.Value;
-      var name = principal.FindFirst("name")?.Value;
-      var email = principal.FindFirst("email")?.Value;
+      var name = principal.FindFirst(ClaimTypes.Name)?.Value;
+      var email = principal.FindFirst(ClaimTypes.Email)?.Value;
 
-      if (userId != null && name != null)
+      if (name != null)
       {
         _state.PersistAsJson(nameof(UserInfo), new UserInfo
         {
-          UserId = userId,
           Name = name,
           Email = email
         });
@@ -85,7 +80,7 @@ public class PersistingRevalidatingAuthenticationStateProvider : RevalidatingSer
     }
   }
 
-  protected override void Dispose(bool disposing)
+    protected override void Dispose(bool disposing)
   {
     _subscription.Dispose();
     AuthenticationStateChanged -= OnAuthenticationStateChanged;

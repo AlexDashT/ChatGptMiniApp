@@ -1,4 +1,4 @@
-﻿namespace AuthenticationStateSyncer;
+﻿namespace ChatGptMiniApp.Shared.Domain.Dtos;
 
 public class UserInfo
 {

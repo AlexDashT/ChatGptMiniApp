@@ -1,0 +1,54 @@
+﻿@page "/login"
+@inject NavigationManager Navigation
+@inject AuthService AuthService
+@inject Blazored.LocalStorage.ILocalStorageService LocalStorage
+@rendermode InteractiveServer
+<h3>Login</h3>
+
+@if (!codeSent)
+{
+    <div>
+        <input @bind="email" placeholder="Enter your email" />
+        <button @onclick="SendVerificationCode">Send Code</button>
+    </div>
+}
+else
+{
+    <div>
+        <p>A verification code was sent to your email.</p>
+        <input @bind="verificationCode" placeholder="Enter the code" />
+        <button @onclick="VerifyCode">Login</button>
+    </div>
+    <div class="alert alert-danger" role="alert">
+        @errorMessage
+    </div>
+}
+
+@code {
+    private string email;
+    private string verificationCode;
+    private bool codeSent = false;
+    private string errorMessage;
+
+    private async Task SendVerificationCode()
+    {
+        codeSent = await AuthService.SendVerificationCodeAsync(email);
+    }
+
+    private async Task VerifyCode()
+    {
+        var token = await AuthService.VerifyCodeAsync(email, verificationCode);
+        if (token != null)
+        {
+            await LocalStorage.SetItemAsStringAsync("token", token);
+            Navigation.NavigateTo($"/signincallback?email={email}&token={token}", forceLoad: true);
+        }
+        else
+        {
+            errorMessage = "The verification code is incorrect";
+            StateHasChanged();
+        }
+    }
+
+    
+}

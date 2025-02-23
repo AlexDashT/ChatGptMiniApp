@@ -1,24 +1,22 @@
 ﻿using System.Net.Http.Json;
+using Blazored.LocalStorage;
+using System.Net.Http.Headers;
 
 namespace ChatGptMiniApp.Client.Services;
 
-public class ChatService
+public class ChatService(HttpClient httpClient, ILocalStorageService localStorage)
 {
-    private readonly HttpClient _httpClient;
-
-    public ChatService(HttpClient httpClient)
-    {
-        _httpClient = httpClient;
-    }
-
     public async Task StreamMessage(Guid chatId, string userMessage, Action<string> onMessageReceived, Action<string> onChatIdReceived)
     {
+        var token =await localStorage.GetItemAsStringAsync("token");
+        httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        
         var request = new HttpRequestMessage(HttpMethod.Post, $"api/chat/{chatId}/stream")
         {
             Content = JsonContent.Create(userMessage)
         };
 
-        var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+        var response = await httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
         response.EnsureSuccessStatusCode();
 
         var stream = await response.Content.ReadAsStreamAsync();
